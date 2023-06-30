@@ -69,8 +69,8 @@ export default () => {
     const gcCodeTemplate = {
     "type": "tx",
     "ttl": 180,
-    "title": `${handle} - repsistance contributor`,
-    "description": `repsistance Contributor IDNFT minting tx`,
+    "title": `${handle} - DCypher Voter`,
+    "description": `DCypher Voting IDNFT minting tx`,
     "onSuccessURL": `${process.env.PUBLIC_URL}/#/signin`,
     "outputs": {
       "addr1qxyh3m7vwdw79rw97m0lghjxhhk9pjmsn6dfe2ms2m043ppvrzdp4wcghqx83fez83rz9t0lzjtqn3ug5ujnuugq4jpq39tkw2": [

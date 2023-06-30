@@ -1,0 +1,212 @@
+
+<html>
+    <head>
+      <title>DCypher MBO - GameChanger Wallet Dapp Connection</title>
+      <script type="text/javascript" src="https://unpkg.com/json-url@2.3.1/dist/browser/json-url.js"></script>
+      <script>
+  
+        //This is the GCScript code that GameChanger Wallet will execute
+        const code={
+      "type": "script",
+      "title": "DCypher MBO",
+      "description": "This script will create a workspace to import addresses, scripts, manage funds and signatures from a DAO where you are a powerful member, you have full control when you use 2 of your keys. (Full support is coming)",
+      "exportAs": "DCypherMBO",
+      "return": {
+          "mode": "none"
+      },
+      "returnURLPattern": "http://localhost:3000/demo/api/dapp",
+      "run": {
+          "otherMemberKeyHashes": {
+              "type": "data",
+              "value": {
+                  "Dave": "3ecb73dee12d39d8787c9b87e71e857c6dd487d4fe7c5173e0bb8c74",
+                  "Curtis": "1d46f358ba291245db79a6b953703a131e688ab2054e6a85b742d621",
+                  "Randall": "ad0a0ecf8ae61aba9b75d337b7348a4ad5d1a92aad9d8aeaf04b28d2",
+                  "Demmy": "ad0a0ecf8ae61aba9b75d337b7348a4ad5d1a92aad9d8aeaf04b28d2",
+                  "Quasar": "ad0a0ecf8ae61aba9b75d337b7348a4ad5d1a92aad9d8aeaf04b28d2",
+                  "Harry": "ad0a0ecf8ae61aba9b75d337b7348a4ad5d1a92aad9d8aeaf04b28d2"
+              }
+          },
+          "walletSetup": {
+              "type": "loadConfig",
+              "updateId": "DCypherMBO",
+              "layers": [
+                  {
+                      "type": "Workspace",
+                      "items": [
+                          {
+                              "namePattern": "dcypherdao",
+                              "titlePattern": "DCypher DAO",
+                              "descriptionPattern": "Wallet settings to create a DAO for the primary DAO Workspace."
+                          }
+                      ]
+                  },
+                  {
+                      "type": "Key",
+                      "workspaceIds": [
+                          "dcypherdao"
+                      ],
+                      "items": [
+                          {
+                              "namePattern": "spend-sponsor",
+                              "kind": "spend",
+                              "accountIndex": 0,
+                              "addressIndex": 0
+                          },
+                          {
+                              "namePattern": "stake-sponsor",
+                              "kind": "stake",
+                              "accountIndex": 0,
+                              "addressIndex": 0
+                          },
+                          {
+                              "namePattern": "Casper",
+                              "kind": "spend",
+                              "accountIndex": 0,
+                              "addressIndex": 1
+                          },
+                          {
+                              "namePattern": "Slimer",
+                              "kind": "spend",
+                              "accountIndex": 0,
+                              "addressIndex": 2
+                          },
+                          {
+                              "namePattern": "MoaningMyrtle",
+                              "kind": "stake",
+                              "accountIndex": 0,
+                              "addressIndex": 3
+                          }
+                      ]
+                  },
+                  {
+                      "type": "NativeScript",
+                      "workspaceIds": [
+                          "dcypherdao"
+                      ],
+                      "namePattern": "dcypherdao_script",
+                      "items": [
+                          {
+                              "atLeast": 3,
+                              "ofThese": [
+                                  {
+                                      "pubKeyHashHex": "{get('cache.otherMemberKeyHashes.Dave')}"
+                                  },
+                                  {
+                                      "pubKeyHashHex": "{get('cache.otherMemberKeyHashes.Curtis')}"
+                                  },
+                                  {
+                                      "pubKeyHashHex": "{get('cache.otherMemberKeyHashes.Randall')}"
+                                  },
+                                  {
+                                      "pubKeyHashHex": "{get('cache.otherMemberKeyHashes.Demmy')}"
+                                  },
+                                  {
+                                      "pubKeyHashHex": "{get('cache.otherMemberKeyHashes.Quasar')}"
+                                  },
+                                  {
+                                      "pubKeyHashHex": "{get('cache.otherMemberKeyHashes.Harry')}"
+                                  },
+                                  {
+                                      "pubKeyName": "Casper"
+                                  },
+                                  {
+                                      "pubKeyName": "Slimer"
+                                  },
+                                  {
+                                      "pubKeyName": "MoaningMyrtle"
+                                  }
+                              ]
+                          }
+                      ]
+                  },
+                  {
+                      "type": "Address",
+                      "workspaceIds": [
+                          "dcypherdao"
+                      ],
+                      "items": [
+                          {
+                              "namePattern": "Sponsor",
+                              "spendPubKeyName": "spend-sponsor",
+                              "stakePubKeyName": "stake-sponsor"
+                          },
+                          {
+                              "namePattern": "SharedTreasury",
+                              "spendNativeScriptName": "dcypherdao_script",
+                              "stakeNativeScriptName": "dcypherdao_script"
+                          }
+                      ]
+                  }
+              ]
+          }
+      }
+  };
+  
+        //GameChanger Wallet now support arbitrary data returning from script execution, encoded in a redirect URL
+        //Head to https://beta-preprod-wallet.gamechanger.finance/doc/api/v2/api.html#returnURLPattern to learn ways how to customize this URL
+  
+        //Always design your scripts in such a way you avoid leaking sensitive information.
+        //Building wallet-agnostic scripts is the ideal way, this is not CIP-30
+  
+        //This is a patch to adapt the return URL of the script to the origin that is hosting this html file.
+        code.returnURLPattern=window.location.origin; //customize to your own
+  
+        window.onload=function() {
+            //GameChanger Scripts are compressed using: https://www.npmjs.com/package/json-url
+            const lib = JsonUrl('lzma'); // JsonUrl is added to the window object 
+            const link=document.getElementById("dapp-connector");                
+            const pre = document.getElementById("result");                
+            const url = new URL(window.location.href);
+            const resultRaw = url.searchParams.get("result");             
+  
+            //generates the URL that is packed with the script
+            lib.compress(code)
+            .then(gcscript => { 
+                link.href="https://beta-preprod-wallet.gamechanger.finance/api/2/run/"+gcscript;
+                link.innerHTML="<h2>▶️<br/>Run on GameChanger Wallet</h2>"
+            })
+            .catch(err => {
+                link.innerHTML="Error: " + err.message;
+            });
+            
+            if(!resultRaw){
+                pre.innerText=result="No results yet - please run the dapp connection first";
+                return;
+            }
+  
+            //decodes the returning URL from the wallet that is packed with the script exports
+            lib.decompress(resultRaw)
+            .then(decodedObj => { 
+                    const decodedStr=JSON.stringify(decodedObj,null,2);
+                    pre.innerText=decodedStr;
+            })
+            .catch(err => {
+                    pre.innerText=result="Error: " + err.message;
+            });
+  
+        }    
+  
+      </script>
+    </head>
+    <body>
+        <div style="text-align:center;">  
+        <h1>DCypher MBO</h1>
+        <p>This script will create a workspace to import addresses, scripts, manage funds and signatures from a DAO where you are a powerful member, you have full control when you use 2 of your keys. (Full support is coming)</p>
+        <p><a id="dapp-connector" href="#" >loading...</a></p>    
+        <pre id="result" style="text-align:left;background-color: black;color: green; min-height:200px;padding: 8px;">
+            loading results...
+        </pre>
+        <br/><br/><br/>
+        <p>
+            <p><i> 💪 Lets turn Cardano into the Blockchain of the Web! 💪 </i> </p>
+            <br/> 
+            <p><a target="_blank" rel="noopener noreferrer" href="https://twitter.com/GameChangerOk"> Twitter</a> </p>
+            <p><a target="_blank" rel="noopener noreferrer" href="https://discord.gg/vpbfyRaDKG"> Discord</a> </p>
+            <p><a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/@gamechanger.finance"> Youtube</a> </p>
+            <p><a target="_blank" rel="noopener noreferrer" href="https://gamechanger.finance"> Website</a> </p>
+            <p><a target="_blank" rel="noopener noreferrer" href="https://beta-preprod-wallet.gamechanger.finance/doc/api/v2/api.html"> API Documentation</a> </p>
+            <p><i>Generated with ❤️ by <b><a target="_blank" rel="noopener noreferrer" href="https://beta-preprod-wallet.gamechanger.finance/playground"> GameChanger Wallet Playground IDE</a></b> 2023 </i></p>
+        </p>
+    </body>
+  </html>
