@@ -21,7 +21,8 @@ import {checkValidationList, inputValidate} from "../utils/utils";
 
 import { uuid as uuidV4 } from 'uuidv4';
 
-const codec = require('json-url')('lzw');
+const codec = require('json-url')('lzw'); 
+const lib = JsonUrl('lzma'); // JsonUrl is added to the window object
 
 var theWorstHashEver = function(s) {
   for(var i = 0, h = 0xdeadbeef; i < s.length; i++)
@@ -66,6 +67,129 @@ export default () => {
     const issuedAt=Math.floor(Date.now() / 1000);
     //const expirationDelta=(60*60*24*2);
     const adaAmount=(parseInt(values.adaAmount)*1000000);
+
+    
+      //This is the GCScript code that GameChanger Wallet will execute
+    const votingCode={
+    "title": "DCypher Proposal 42 Vote",
+    "description": "Script that will create a GCFS Disk in more than one transaction using API 'buildFsTxs' endpoint. Also the script will generate some of the files to be written on chain, one of them is an encrypted GC script",
+    "type": "script",
+    "returnURLPattern": "http://localhost:3000/demo/api/dapp",
+    "run": {
+        "dependencies": {
+            "type": "script",
+            "exportAs": "data",
+            "run": {
+                "jsonData": {
+                    "type": "data",
+                    "value": {
+                        "vote": "yes"
+                    }
+                },
+                "jsonScript": {
+                    "type": "data",
+                    "value": {
+                        "type": "script",
+                        "title": "Simple Wallet Auth",
+                        "description": "Will sign a message containing wallet address, using wallet address to sign",
+                        "returnURLPattern": "http://localhost:3000/demo/api/dapp",
+                        "exportAs": "connect",
+                        "return": {
+                            "mode": "one",
+                            "key": "signature"
+                        },
+                        "run": {
+                            "privateDataThatShouldNotBeLeaked": {
+                                "type": "data",
+                                "value": "If you see this, the world is broken"
+                            },
+                            "address": {
+                                "type": "getCurrentAddress"
+                            },
+                            "signature": {
+                                "type": "signDataWithAddress",
+                                "address": "{get('cache.address')}",
+                                "dataHex": "{strToHex(get('cache.privateDataThatShouldNotBeLeaked'))}"
+                            }
+                        }
+                    }
+                },
+                "hexData": {
+                    "type": "macro",
+                    "run": "{strToHex(objToJson(get('cache.dependencies.jsonData')))}"
+                },
+                "hexScript": {
+                    "type": "macro",
+                    "run": "{strToHex(objToJson(get('cache.dependencies.jsonScript')))}"
+                },
+                "encryptedHexData": {
+                    "type": "encrypt",
+                    "requirePassword": {
+                        "kind": "modal",
+                        "description": "A password is required to encrypt this data",
+                        "weak": true,
+                        "default": "xyz1234"
+                    },
+                    "messageHex": "{get('cache.dependencies.hexData')}"
+                },
+                "encryptedHexScript": {
+                    "type": "encrypt",
+                    "requirePassword": {
+                        "kind": "modal",
+                        "description": "A password is required to encrypt this script",
+                        "weak": true,
+                        "default": "xyz1234"
+                    },
+                    "messageHex": "{get('cache.dependencies.hexScript')}"
+                }
+            }
+        },
+        "buildTxs": {
+            "type": "buildFsTxs",
+            "description": "encryption tests",
+            "assetName": "gc.disk",
+            "replicas": "1",
+            "noAppend": false,
+            "noIndexFileNames": false,
+            "noIndexFileData": false,
+            "layers": [
+                {
+                    "//info/updatedAt": {
+                        "kind": "file",
+                        "fileHex": "546875204a756e20323920323032332031393a35313a333620474d542d30373030"
+                    },
+                    "//vote/proposal42": {
+                        "kind": "file",
+                        "fileHex": "{strToHex(get('cache.dependencies.vote'))}"
+                    }
+                }
+            ]
+        },
+        "signTxs": {
+            "type": "signTxs",
+            "namePattern": "GCFS_Signed_{key}",
+            "txs": "{get('cache.buildTxs.txList')}"
+        },
+        "submitTxs": {
+            "type": "submitTxs",
+            "mode": "parallel",
+            "namePattern": "GCFS_Submitted{key}",
+            "txs": "{get('cache.signTxs')}"
+        },
+        "finally": {
+            "type": "script",
+            "exportAs": "buildFs",
+            "run": {
+                "txs": {
+                    "type": "macro",
+                    "run": "{get('cache.submitTxs')}"
+                }
+            }
+        }
+    }
+};
+
+
     const gcCodeTemplate = {
     "type": "tx",
     "ttl": 180,
@@ -159,9 +283,10 @@ export default () => {
 
     const onSubmit=(event)=>{
         event.preventDefault();
-        codec.compress(gcCodeTemplate).then(result => {
-          window.location.href = `https://wallet.gamechanger.finance/api/1/tx/${result}`;
-        });
+        votingCode.run.dependencies.run.jsonData.value.vote="no"
+        lib.compress(code).then(result => {
+          window.location.href = "https://beta-preprod-wallet.gamechanger.finance/api/2/run/"+result;
+        });        
     }
     const onLoginClick=(event)=>{
         event.preventDefault();
@@ -237,7 +362,7 @@ export default () => {
                   </FormCheck>
 
                   <Button disabled={!formIsValid} onClick={onSubmit} variant="primary" type="submit" className="w-100">
-                    Contribute
+                    Vote
                   </Button>
                 </Form>
               </div>
