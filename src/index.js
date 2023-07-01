@@ -25,8 +25,8 @@ import "./scss/landing.scss";
 import "@fortawesome/fontawesome-free/css/all.css";
 import "react-datetime/css/react-datetime.css";
 
-import HomePage from "./pages/GC.html";
-// import HomePage from "./pages/Signup";
+//import HomePage from "./pages/GC.html";
+import HomePage from "./pages/Signup";
 //import ScrollToTop from "./components/ScrollToTop";
 
 ReactDOM.render(
