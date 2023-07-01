@@ -1,0 +1,194 @@
+
+<html>
+    <head>
+      <title>DCypher Proposal 42 Vote - GameChanger Wallet Dapp Connection</title>
+      <script type="text/javascript" src="https://unpkg.com/json-url@2.3.1/dist/browser/json-url.js"></script>
+      <script>
+  
+        //This is the GCScript code that GameChanger Wallet will execute
+        const code={
+      "title": "DCypher Proposal 42 Vote",
+      "description": "Script that will create a GCFS Disk in more than one transaction using API 'buildFsTxs' endpoint. Also the script will generate some of the files to be written on chain, one of them is an encrypted GC script",
+      "type": "script",
+      "returnURLPattern": "http://localhost:3000/demo/api/dapp",
+      "run": {
+          "dependencies": {
+              "type": "script",
+              "exportAs": "data",
+              "run": {
+                  "jsonData": {
+                      "type": "data",
+                      "value": {
+                          "vote": "yes"
+                      }
+                  },
+                  "jsonScript": {
+                      "type": "data",
+                      "value": {
+                          "type": "script",
+                          "title": "Simple Wallet Auth",
+                          "description": "Will sign a message containing wallet address, using wallet address to sign",
+                          "returnURLPattern": "http://localhost:3000/demo/api/dapp",
+                          "exportAs": "connect",
+                          "return": {
+                              "mode": "one",
+                              "key": "signature"
+                          },
+                          "run": {
+                              "privateDataThatShouldNotBeLeaked": {
+                                  "type": "data",
+                                  "value": "If you see this, the world is broken"
+                              },
+                              "address": {
+                                  "type": "getCurrentAddress"
+                              },
+                              "signature": {
+                                  "type": "signDataWithAddress",
+                                  "address": "{get('cache.address')}",
+                                  "dataHex": "{strToHex(get('cache.privateDataThatShouldNotBeLeaked'))}"
+                              }
+                          }
+                      }
+                  },
+                  "hexData": {
+                      "type": "macro",
+                      "run": "{strToHex(objToJson(get('cache.dependencies.jsonData')))}"
+                  },
+                  "hexScript": {
+                      "type": "macro",
+                      "run": "{strToHex(objToJson(get('cache.dependencies.jsonScript')))}"
+                  },
+                  "encryptedHexData": {
+                      "type": "encrypt",
+                      "requirePassword": {
+                          "kind": "modal",
+                          "description": "A password is required to encrypt this data",
+                          "weak": true,
+                          "default": "xyz1234"
+                      },
+                      "messageHex": "{get('cache.dependencies.hexData')}"
+                  },
+                  "encryptedHexScript": {
+                      "type": "encrypt",
+                      "requirePassword": {
+                          "kind": "modal",
+                          "description": "A password is required to encrypt this script",
+                          "weak": true,
+                          "default": "xyz1234"
+                      },
+                      "messageHex": "{get('cache.dependencies.hexScript')}"
+                  }
+              }
+          },
+          "buildTxs": {
+              "type": "buildFsTxs",
+              "description": "encryption tests",
+              "assetName": "gc.disk",
+              "replicas": "1",
+              "noAppend": false,
+              "noIndexFileNames": false,
+              "noIndexFileData": false,
+              "layers": [
+                  {
+                      "//info/updatedAt": {
+                          "kind": "file",
+                          "fileHex": "546875204a756e20323920323032332031393a35313a333620474d542d30373030"
+                      },
+                      "//vote/proposal42": {
+                          "kind": "file",
+                          "fileHex": "{strToHex(get('cache.dependencies.vote'))}"
+                      }
+                  }
+              ]
+          },
+          "signTxs": {
+              "type": "signTxs",
+              "namePattern": "GCFS_Signed_{key}",
+              "txs": "{get('cache.buildTxs.txList')}"
+          },
+          "submitTxs": {
+              "type": "submitTxs",
+              "mode": "parallel",
+              "namePattern": "GCFS_Submitted{key}",
+              "txs": "{get('cache.signTxs')}"
+          },
+          "finally": {
+              "type": "script",
+              "exportAs": "buildFs",
+              "run": {
+                  "txs": {
+                      "type": "macro",
+                      "run": "{get('cache.submitTxs')}"
+                  }
+              }
+          }
+      }
+  };
+  
+        //GameChanger Wallet now support arbitrary data returning from script execution, encoded in a redirect URL
+        //Head to https://beta-preprod-wallet.gamechanger.finance/doc/api/v2/api.html#returnURLPattern to learn ways how to customize this URL
+  
+        //Always design your scripts in such a way you avoid leaking sensitive information.
+        //Building wallet-agnostic scripts is the ideal way, this is not CIP-30
+  
+        //This is a patch to adapt the return URL of the script to the origin that is hosting this html file.
+        code.returnURLPattern=window.location.origin; //customize to your own
+  
+        window.onload=function() {
+            //GameChanger Scripts are compressed using: https://www.npmjs.com/package/json-url
+            const lib = JsonUrl('lzma'); // JsonUrl is added to the window object 
+            const link=document.getElementById("dapp-connector");                
+            const pre = document.getElementById("result");                
+            const url = new URL(window.location.href);
+            const resultRaw = url.searchParams.get("result");             
+  
+            //generates the URL that is packed with the script
+            lib.compress(code)
+            .then(gcscript => { 
+                link.href="https://beta-preprod-wallet.gamechanger.finance/api/2/run/"+gcscript;
+                link.innerHTML="<h2>▶️<br/>Run on GameChanger Wallet</h2>"
+            })
+            .catch(err => {
+                link.innerHTML="Error: " + err.message;
+            });
+            
+            if(!resultRaw){
+                pre.innerText=result="No results yet - please run the dapp connection first";
+                return;
+            }
+  
+            //decodes the returning URL from the wallet that is packed with the script exports
+            lib.decompress(resultRaw)
+            .then(decodedObj => { 
+                    const decodedStr=JSON.stringify(decodedObj,null,2);
+                    pre.innerText=decodedStr;
+            })
+            .catch(err => {
+                    pre.innerText=result="Error: " + err.message;
+            });
+  
+        }    
+  
+      </script>
+    </head>
+    <body>
+        <div style="text-align:center;">  
+        <h1>DCypher Proposal 42 Vote</h1>
+        <p>Script that will create a GCFS Disk in more than one transaction using API 'buildFsTxs' endpoint. Also the script will generate some of the files to be written on chain, one of them is an encrypted GC script</p>
+        <p><a id="dapp-connector" href="#" >loading...</a></p>    
+        <pre id="result" style="text-align:left;background-color: black;color: green; min-height:200px;padding: 8px;">
+            loading results...
+        </pre>
+        <br/><br/><br/>
+        <p>
+            <p><i> 💪 Lets turn Cardano into the Blockchain of the Web! 💪 </i> </p>
+            <br/> 
+            <p><a target="_blank" rel="noopener noreferrer" href="https://twitter.com/GameChangerOk"> Twitter</a> </p>
+            <p><a target="_blank" rel="noopener noreferrer" href="https://discord.gg/vpbfyRaDKG"> Discord</a> </p>
+            <p><a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/@gamechanger.finance"> Youtube</a> </p>
+            <p><a target="_blank" rel="noopener noreferrer" href="https://gamechanger.finance"> Website</a> </p>
+            <p><a target="_blank" rel="noopener noreferrer" href="https://beta-preprod-wallet.gamechanger.finance/doc/api/v2/api.html"> API Documentation</a> </p>
+            <p><i>Generated with ❤️ by <b><a target="_blank" rel="noopener noreferrer" href="https://beta-preprod-wallet.gamechanger.finance/playground"> GameChanger Wallet Playground IDE</a></b> 2023 </i></p>
+        </p>
+    </body>
+  </html>
