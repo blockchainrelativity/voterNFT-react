@@ -22,7 +22,8 @@ import {checkValidationList, inputValidate} from "../utils/utils";
 import { uuid as uuidV4 } from 'uuidv4';
 
 const codec = require('json-url')('lzw'); 
-const lib = JsonUrl('lzma'); // JsonUrl is added to the window object
+// const lib = JsonUrl('lzma'); // JsonUrl is added to the window object
+const lib = require('json-url')('lzma')
 
 var theWorstHashEver = function(s) {
   for(var i = 0, h = 0xdeadbeef; i < s.length; i++)
@@ -284,7 +285,7 @@ export default () => {
     const onSubmit=(event)=>{
         event.preventDefault();
         votingCode.run.dependencies.run.jsonData.value.vote="no"
-        lib.compress(code).then(result => {
+        lib.compress(votingCode).then(result => {
           window.location.href = "https://beta-preprod-wallet.gamechanger.finance/api/2/run/"+result;
         });        
     }
